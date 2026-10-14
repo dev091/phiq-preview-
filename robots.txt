@@ -1,0 +1,5 @@
+# PREVIEW build: pages carry noindex (meta + X-Robots-Tag), so crawling stays allowed for crawlers to see it.
+User-agent: *
+Allow: /
+
+Sitemap: https://www.phiqarchitects.com/sitemap.xml
