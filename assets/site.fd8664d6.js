@@ -1,4 +1,4 @@
-/* phi-Q Architects v3. Progressive enhancement: every page is complete without this file.
+/* phi-Q Architects v4. Progressive enhancement: every page is complete without this file.
    Uses GSAP + ScrollTrigger + Lenis from the vendor bundle when present; degrades to a still, fully visible page. */
 (function () {
   'use strict';
@@ -21,7 +21,7 @@
       W.requestAnimationFrame(function () {
         cur.classList.add('is-out');
         h.classList.remove('pt-in');
-        setTimeout(function () { cur.classList.remove('is-out'); }, 1000);
+        setTimeout(function () { cur.classList.remove('is-out'); }, 340);
       });
     });
   }
@@ -41,7 +41,7 @@
     if (!name || name.length > 60 || /^home$/i.test(name)) name = 'phi-Q Architects';
     if (lbl) lbl.textContent = name;
     cur.classList.add('is-go');
-    setTimeout(function () { location.href = u.href; }, 640);
+    setTimeout(function () { location.href = u.href; }, 230);
   });
   W.addEventListener('pageshow', function (e) {
     if (e.persisted && cur) { cur.classList.remove('is-go', 'is-out'); h.classList.remove('pt-in'); try { sessionStorage.removeItem('pq-pt'); } catch (x) {} }
@@ -49,7 +49,7 @@
 
   /* ---------- smooth scroll (desktop pointers only) ---------- */
   if (motion && W.Lenis && mqFine.matches) {
-    lenis = new W.Lenis({ duration: 1.15, easing: function (t) { return Math.min(1, 1.001 - Math.pow(2, -10 * t)); } });
+    lenis = new W.Lenis({ lerp: 0.12 });
     if (anim) {
       lenis.on('scroll', ST.update);
       G.ticker.add(function (t) { lenis.raf(t * 1000); });
@@ -89,7 +89,7 @@
 
   /* ---------- menu ---------- */
   var mb = $('[data-menu-btn]'), menu = $('[data-menu]');
-  function setMenu(open) {
+  function setMenu(open, instant) {
     if (!mb || !menu) return;
     menuOpen = open;
     mb.setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -105,12 +105,12 @@
       menu.classList.remove('is-open');
       d.body.style.overflow = '';
       if (lenis) lenis.start();
-      setTimeout(function () { if (!menuOpen) menu.hidden = true; }, motion ? 700 : 0);
+      if (instant) menu.hidden = true; else setTimeout(function () { if (!menuOpen) menu.hidden = true; }, motion ? 180 : 0);
     }
     onScroll();
   }
   if (mb) mb.addEventListener('click', function () { setMenu(!menuOpen); });
-  d.addEventListener('keydown', function (e) { if (e.key === 'Escape' && menuOpen) { setMenu(false); mb.focus(); } });
+  d.addEventListener('keydown', function (e) { if (e.key === 'Escape' && menuOpen) { setMenu(false, true); mb.focus(); } });
   if (mqDesk.addEventListener) mqDesk.addEventListener('change', function () { if (menuOpen) setMenu(false); });
 
   /* ---------- hero film (muted loop from their photographs; never for reduced motion or data saver) ---------- */
@@ -118,18 +118,18 @@
   if (hero && film && motion && !(navigator.connection && navigator.connection.saveData)) {
     var caps = [];
     try { caps = JSON.parse(hero.getAttribute('data-caps')) || []; } catch (x) {}
-    var capA = $('[data-cap]', hero), capT = $('[data-capt]', hero), cnt = $('[data-count]', hero), bar = $('[data-bar]', hero), pause = $('[data-pause]', hero);
+    var capA = $('[data-cap]', hero), capT = $('[data-capt]', hero), bar = $('[data-bar]', hero), pause = $('[data-pause]', hero);
     var shown = 0, userPaused = false, inView = true;
     var setCap = function (i) {
       if (i === shown || !caps[i]) return;
       shown = i;
       if (capA) capA.href = caps[i].u;
-      if (cnt) cnt.textContent = ('0' + (i + 1)).slice(-2);
       if (!capT) return;
       if (G) {
-        G.to(capT, { yPercent: -110, opacity: 0, duration: .4, ease: 'power3.in', onComplete: function () {
+        G.killTweensOf(capT);
+        G.to(capT, { yPercent: -40, opacity: 0, duration: .16, ease: 'power2.out', onComplete: function () {
           capT.textContent = caps[i].t;
-          G.fromTo(capT, { yPercent: 110, opacity: 0 }, { yPercent: 0, opacity: 1, duration: .8, ease: 'expo.out' });
+          G.fromTo(capT, { yPercent: 40, opacity: 0 }, { yPercent: 0, opacity: 1, duration: .26, ease: 'power3.out' });
         } });
       } else capT.textContent = caps[i].t;
     };
@@ -157,23 +157,33 @@
     d.addEventListener('visibilitychange', function () { if (film.currentSrc) sync(); });
   }
 
+  /* ---------- image reveals: a mask opens from the bottom while the photograph settles (deliberate slow exception, 1.1 s).
+     Triggered once by IntersectionObserver; the motion itself is a CSS transition, so it does not compete with scrolling. ---------- */
+  if (motion && 'IntersectionObserver' in W) {
+    var vh0 = W.innerHeight;
+    var masks = $$('.g__mask').filter(function (m) { return !m.closest('.wk__pv') && m.getBoundingClientRect().top > vh0 * 0.92; });
+    masks.forEach(function (m) { m.classList.add('rv-mask'); });
+    var io = new IntersectionObserver(function (en) {
+      en.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        var m = e.target; io.unobserve(m);
+        m.classList.add('is-in');
+        var done = function (ev) { if (ev && ev.target !== m) return; m.classList.remove('rv-mask', 'is-in'); m.removeEventListener('transitionend', done); };
+        m.addEventListener('transitionend', done);
+        setTimeout(done, 1400);
+      });
+    }, { rootMargin: '0px 0px -8% 0px' });
+    masks.forEach(function (m) { io.observe(m); });
+  }
+
   /* ---------- scroll choreography ---------- */
   if (anim) {
     var vh = W.innerHeight;
     var below = function (el) { return el.getBoundingClientRect().top > vh * 0.92; };
-    $$('.g__mask').forEach(function (m) {
-      if (!below(m) || m.closest('.wk__pv')) return;
-      var img = m.querySelector('img');
-      G.set(m, { clipPath: 'inset(100% 0% 0% 0%)' }); if (img) G.set(img, { scale: 1.18 });
-      ST.create({ trigger: m, start: 'top 92%', once: true, onEnter: function () {
-        G.to(m, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.5, ease: 'expo.out' });
-        if (img) G.to(img, { scale: 1, duration: 2, ease: 'expo.out', clearProps: 'transform' });
-      } });
-    });
-    var ups = $$('.rv-up, .idx__row, .prop__card, .ct__blk, .sec-head, .cs-info > *, .feat__cap, .wk__head, .stmt > *').filter(below);
+    var ups = $$('.rv-up, .idx__row, .prop__card, .sec-head, .cs-info > *, .feat__cap, .wk__head, .stmt > *:not(.vh), .rv__lead, .cs-stage__head, .cs-next__a').filter(below);
     if (ups.length) {
-      G.set(ups, { opacity: 0, y: 40 });
-      ST.batch(ups, { start: 'top 94%', once: true, onEnter: function (b) { G.to(b, { opacity: 1, y: 0, duration: 1.1, ease: 'expo.out', stagger: .07, clearProps: 'transform' }); } });
+      G.set(ups, { opacity: 0, y: 16 });
+      ST.batch(ups, { start: 'top 94%', once: true, onEnter: function (b) { G.to(b, { opacity: 1, y: 0, duration: .3, ease: 'power3.out', stagger: .07, clearProps: 'opacity,transform' }); } });
     }
     if (hero) {
       G.to($('.hero__media', hero), { yPercent: 12, ease: 'none', scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom top', scrub: true } });
@@ -200,7 +210,7 @@
         var n = new Image(); n.src = a.getAttribute('data-img');
         var go = function () { pimg.src = n.src; if (pcap) pcap.textContent = a.getAttribute('data-cap'); pv.classList.remove('is-swap'); };
         if (n.complete) go(); else { n.onload = go; n.onerror = go; }
-      }, motion ? 180 : 0);
+      }, motion ? 120 : 0);
     };
     $$('.idx__row a', list).forEach(function (a) { a.addEventListener('mouseenter', function () { show(a); }); a.addEventListener('focus', function () { show(a); }); });
     W.addEventListener('load', function () { setTimeout(function () { $$('.idx__row a', list).forEach(function (a) { var i = new Image(); i.src = a.getAttribute('data-img'); }); }, 1200); });
@@ -214,6 +224,7 @@
       $$('[data-f]', ctl).forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-f') === f ? 'true' : 'false'); });
       $$('.idx__row, .prop__card').forEach(function (r) { r.classList.toggle('is-out', f !== 'all' && (' ' + r.getAttribute('data-cats') + ' ').indexOf(' ' + f + ' ') < 0); });
       $$('[data-group]').forEach(function (g) { g.hidden = !$$('.idx__row:not(.is-out), .prop__card:not(.is-out)', g).length; });
+      if (anim) G.fromTo($$('.idx__row:not(.is-out), .prop__card:not(.is-out)'), { opacity: 0 }, { opacity: 1, duration: .2, ease: 'power1.out', stagger: { amount: .12 }, clearProps: 'opacity' });
       var firstRow = $('.idx__row:not(.is-out) a');
       if (firstRow && pv) firstRow.dispatchEvent(new Event('focus'));
       if (ST) ST.refresh();
@@ -226,8 +237,9 @@
   /* ---------- lightbox ---------- */
   var dlg = $('[data-lb-dialog]');
   if (dlg && typeof dlg.showModal === 'function') {
-    var items = $$('[data-lb]'), li = 0, limg = $('[data-lb-img]', dlg), lcap = $('[data-lb-cap]', dlg), lcnt = $('[data-lb-count]', dlg);
-    var showLb = function (i) {
+    var items = $$('[data-lb]'), li = 0, lcap = $('[data-lb-cap]', dlg), lcnt = $('[data-lb-count]', dlg);
+    var limg = d.createElement('img'); limg.decoding = 'async'; $('[data-lb-fig]', dlg).insertBefore(limg, lcap);
+    var showLb = function (i, fade) {
       li = (i + items.length) % items.length;
       var a = items[li], im = a.querySelector('img');
       limg.removeAttribute('src');
@@ -236,9 +248,9 @@
       limg.alt = im ? im.alt : '';
       lcap.textContent = a.getAttribute('data-cap');
       lcnt.textContent = (li + 1) + ' / ' + items.length;
-      if (anim) G.fromTo(limg, { opacity: 0, scale: .98 }, { opacity: 1, scale: 1, duration: .6, ease: 'expo.out' });
+      if (anim && fade) G.fromTo(limg, { opacity: 0, scale: .98 }, { opacity: 1, scale: 1, duration: .24, ease: 'power3.out', clearProps: 'transform' });
     };
-    items.forEach(function (a, i) { a.addEventListener('click', function (e) { e.preventDefault(); showLb(i); dlg.showModal(); if (lenis) lenis.stop(); }); });
+    items.forEach(function (a, i) { a.addEventListener('click', function (e) { e.preventDefault(); showLb(i, true); dlg.showModal(); if (lenis) lenis.stop(); }); });
     $('[data-lb-prev]', dlg).addEventListener('click', function () { showLb(li - 1); });
     $('[data-lb-next]', dlg).addEventListener('click', function () { showLb(li + 1); });
     $('[data-lb-close]', dlg).addEventListener('click', function () { dlg.close(); });
@@ -253,25 +265,28 @@
   /* ---------- enquiry form ---------- */
   var form = $('[data-form]');
   if (form) {
-    var note = $('[data-form-note]', form), noteHTML = note.innerHTML;
+    var note = $('[data-form-note]', form), alt = $('[data-alt]', note), altHTML = alt ? alt.innerHTML : '';
+    // a field marked invalid clears as soon as the visitor edits it
+    form.addEventListener('input', function (e) { if (e.target.getAttribute('aria-invalid') === 'true') e.target.setAttribute('aria-invalid', 'false'); });
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       var bad = null;
       $$('[required]', form).forEach(function (el) { var ok = el.value.trim() !== ''; el.setAttribute('aria-invalid', ok ? 'false' : 'true'); if (!ok && !bad) bad = el; });
       var em = form.elements.email;
-      if (em && em.value && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em.value)) { em.setAttribute('aria-invalid', 'true'); bad = bad || em; }
-      if (bad) { note.textContent = 'Please add your name and a few words about the project.'; note.setAttribute('role', 'alert'); bad.focus(); return; }
+      if (em) { var emBad = !!em.value && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em.value); em.setAttribute('aria-invalid', emBad ? 'true' : 'false'); if (emBad) bad = bad || em; }
+      if (bad) { note.textContent = bad === em ? 'Please check the email address, or leave it empty.' : 'Please add your name and a few words about the project.'; note.setAttribute('role', 'alert'); bad.focus(); return; }
+      note.removeAttribute('role');
       var v = function (n) { return form.elements[n] ? form.elements[n].value.trim() : ''; };
       if (form.getAttribute('data-mode') === 'web3forms') {
         note.textContent = 'Sending…';
         fetch(form.action, { method: 'POST', body: new FormData(form), headers: { Accept: 'application/json' } })
           .then(function (r) { return r.json(); })
           .then(function (j) { if (j && j.success) { form.reset(); note.textContent = 'Thank you. The studio will get back to you shortly.'; } else throw 0; })
-          .catch(function () { note.innerHTML = 'Sorry, that did not go through. ' + noteHTML; });
+          .catch(function () { note.innerHTML = 'Sorry, that did not go through. ' + altHTML; });
       } else {
         var body = 'Name: ' + v('name') + '\nPhone: ' + v('phone') + '\nEmail: ' + v('email') + '\nProject: ' + v('project') + '\n\n' + v('message');
         location.href = 'mailto:' + form.getAttribute('data-email') + '?subject=' + encodeURIComponent('Project enquiry from ' + v('name')) + '&body=' + encodeURIComponent(body);
-        note.innerHTML = 'Your email app should open with the message ready. ' + noteHTML;
+        note.innerHTML = 'Your email app should open with your message ready to send. ' + altHTML;
       }
     });
   }
