@@ -1,0 +1,3 @@
+GSAP 3.12.5 + ScrollTrigger (GreenSock, https://gsap.com) - "Standard 'No Charge' GSAP License" (https://gsap.com/standard-license), free for commercial use.
+Lenis 1.1.13 (darkroom.engineering, https://github.com/darkroomengineering/lenis) - MIT License.
+Files are the unmodified minified builds from the npm packages.

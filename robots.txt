@@ -1,4 +1,4 @@
-# PREVIEW build: pages carry noindex (meta + X-Robots-Tag), so crawling stays allowed for crawlers to see it.
+# PREVIEW build: pages carry noindex (meta + X-Robots-Tag).
 User-agent: *
 Allow: /
 

@@ -1,18 +1,19 @@
 {
  "name": "phi-Q Architects",
  "short_name": "phi-Q",
- "start_url": "/",
+ "start_url": "./",
+ "scope": "./",
  "display": "browser",
- "background_color": "#f4f2ed",
- "theme_color": "#151513",
+ "background_color": "#f1eee8",
+ "theme_color": "#121211",
  "icons": [
   {
-   "src": "/img/icons/icon-192.png",
+   "src": "img/icons/icon-192.png",
    "sizes": "192x192",
    "type": "image/png"
   },
   {
-   "src": "/img/icons/icon-512.png",
+   "src": "img/icons/icon-512.png",
    "sizes": "512x512",
    "type": "image/png"
   }
